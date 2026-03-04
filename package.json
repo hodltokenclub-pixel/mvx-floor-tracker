@@ -1,0 +1,20 @@
+{
+  "name": "mvx-floor-tracker",
+  "version": "1.0.0",
+  "description": "Daily floor price tracker for MultiversX NFT collections via OOX API",
+  "main": "tracker.js",
+  "scripts": {
+    "start": "node tracker.js",
+    "test": "node tracker.js --test"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "node-cron": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["multiversx", "nft", "floor", "tracker", "oox"],
+  "author": "ClawB",
+  "license": "MIT"
+}
