@@ -37,7 +37,7 @@ Daily floor price tracker for MultiversX NFT collections via OOX API.
    ]
    ```
 
-4. (Optional) Update the webhook URL in `tracker.js` if needed:
+4. (Optional) Update the webhook URL in `index.js` if needed:
    ```javascript
    const CONFIG = {
      webhookUrl: 'https://hook.eu2.make.com/sudwxmtwbxvegyi99iqob91k59i50ujy',
@@ -51,7 +51,7 @@ Daily floor price tracker for MultiversX NFT collections via OOX API.
 ```bash
 npm test
 # or
-node tracker.js --test
+node index.js --test
 ```
 
 ### Start the scheduler (for production)
@@ -69,7 +69,7 @@ If you prefer not to keep a Node process running, you can use systemd or cron:
 
 **Cron example** (run daily at 13:00 UTC):
 ```cron
-0 13 * * * cd /path/to/mvx-floor-tracker && node tracker.js >> /var/log/mvx-floor-tracker.log 2>&1
+0 13 * * * cd /path/to/mvx-floor-tracker && node index.js >> /var/log/mvx-floor-tracker.log 2>&1
 ```
 
 ## Output Format
