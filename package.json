@@ -2,9 +2,9 @@
   "name": "mvx-floor-tracker",
   "version": "1.0.0",
   "description": "Daily floor price tracker for MultiversX NFT collections via OOX API",
-  "main": "tracker.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node tracker.js",
+    "start": "node index.js",
     "test": "node tracker.js --test"
   },
   "dependencies": {
