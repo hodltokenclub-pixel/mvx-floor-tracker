@@ -66,7 +66,10 @@ function cleanHistory(history) {
 }
 
 // Fetch floor listing from OOX
-async function fetchFloorListing(collectionId) {
+// Note: OOX returns listings in mixed payment tokens (EGLD, ONX, etc). The API sorts by
+// USD value (cheapest first), but listing.price is in the listing's native token.
+// We normalize to EGLD using dollarValue to avoid treating e.g. 20000 ONX as 20000 EGLD.
+async function fetchFloorListing(collectionId, egldPrice) {
   const url = `${CONFIG.ooxBaseUrl}/auctions-collection?collection=${collectionId}&size=1&sort=price_asc&chainId=multiversx`;
   
   try {
@@ -84,6 +87,15 @@ async function fetchFloorListing(collectionId) {
     
     const listing = data[0];
     
+    // Normalize price to EGLD: use dollarValue when available (handles ONX, USDC, etc),
+    // otherwise fall back to listing.price (assumed EGLD when buyTokenId is EGLD)
+    let price_egld;
+    if (listing.dollarValue != null && listing.dollarValue > 0 && egldPrice > 0) {
+      price_egld = listing.dollarValue / egldPrice;
+    } else {
+      price_egld = parseFloat(listing.price || 0);
+    }
+    
     // Extract IPFS URL from media array
     let ipfsUrl = '';
     if (listing.media && listing.media.length > 0 && listing.media[0].originalUrl) {
@@ -92,7 +104,7 @@ async function fetchFloorListing(collectionId) {
     
     return {
       nft_id: listing.identifier || '',
-      price_egld: parseFloat(listing.price || 0),
+      price_egld,
       seller: '?', // OOX doesn't expose seller in this endpoint
       market: listing.marketplace || 'unknown',
       thumb: listing.thumbnailUrl || '',
@@ -120,6 +132,8 @@ async function fetchEGLDPrice() {
 }
 
 // Calculate percentage changes
+// Uses the OLDEST price within each window (closest to 1d/1w/1m ago) so each timeframe
+// compares current vs the appropriate historical point.
 function calculateChanges(collectionId, currentPrice, history) {
   const entries = history[collectionId] || [];
   if (entries.length === 0) return { change1d: null, change1w: null, change1m: null };
@@ -130,12 +144,23 @@ function calculateChanges(collectionId, currentPrice, history) {
   const oneMonth = 30 * oneDay;
   
   let price1d = null, price1w = null, price1m = null;
+  let bestAge1d = 0, bestAge1w = 0, bestAge1m = 0;
   
   for (const entry of entries) {
     const age = now - entry.timestamp;
-    if (age <= oneDay && price1d === null) price1d = entry.price_egld;
-    if (age <= oneWeek && price1w === null) price1w = entry.price_egld;
-    if (age <= oneMonth && price1m === null) price1m = entry.price_egld;
+    // Use the entry with the largest age within each window (furthest back in time)
+    if (age <= oneDay && age > bestAge1d) {
+      bestAge1d = age;
+      price1d = entry.price_egld;
+    }
+    if (age <= oneWeek && age > bestAge1w) {
+      bestAge1w = age;
+      price1w = entry.price_egld;
+    }
+    if (age <= oneMonth && age > bestAge1m) {
+      bestAge1m = age;
+      price1m = entry.price_egld;
+    }
   }
   
   const calcChange = (oldPrice) => oldPrice ? ((currentPrice - oldPrice) / oldPrice) * 100 : null;
@@ -160,7 +185,7 @@ async function runTracking() {
   for (const collection of collections) {
     console.log(`  Fetching ${collection.identifier} (${collection.name})...`);
     
-    const floor = await fetchFloorListing(collection.identifier);
+    const floor = await fetchFloorListing(collection.identifier, egldPrice);
     if (!floor) {
       console.log(`    No floor found for ${collection.identifier}`);
       continue;
